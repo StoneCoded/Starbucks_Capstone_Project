@@ -198,7 +198,7 @@ def informational_sort(df):
         df.reset_index(drop = True, inplace = True)
     return df
 
-def process_df(df, trans_comp = True, rec_sort = True, view_sort = True, info_sort = True, success = True):
+def process_df(df, trans_comp = True, rec_sort = True, view_sort = True, info_sort = True, success = True, adj_amount = True):
 
     '''
     ARGS:
@@ -212,6 +212,8 @@ def process_df(df, trans_comp = True, rec_sort = True, view_sort = True, info_so
                  the Offer Received as Offer Completed with all corresponding info.
     success    - Adds success column based of if a transaction was made or an
                  offer completed.
+    adj_amount - Adds adjusted amount column which is simply the transaction amount
+                 minus the discount given (if any)
     RETURNS:
     df         - DataFrame
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -229,52 +231,8 @@ def process_df(df, trans_comp = True, rec_sort = True, view_sort = True, info_so
         df = viewed_sort(df)
     if trans_comp == True:
         df = informational_sort(df)
+
     if success == True:
         df['success'] = df.event.apply(lambda x: 1 if (x == 'offer completed') | (x == 'transaction') else 0)
 
     return df
-
-
-
-
-
-# df.reward.fillna(0, inplace = True)
-df.offer_type.fillna('no offer', inplace = True)
-# df.email.fillna(0, inplace = True)
-
-for x in df.columns:
-
-    try:
-        df[x].fillna(0, inplace = True)
-    except:
-        continue
-
-# sub.head()
-
-# df['sum'] = df.person_index.apply(lambda x: 1 if x != 'NaN' else 0)
-# sub = df.copy()
-# df_events = pd.get_dummies(df.event.apply(pd.Series).stack()).sum(level=0)
-# sub = sub.join(df_events)
-# sub = sub.drop('event', axis = 1)
-#
-# df_gender = pd.get_dummies(df.gender.apply(pd.Series).stack()).sum(level=0)
-# sub = sub.join(df_gender)
-# sub = sub.drop('gender', axis = 1)
-# sub
-# df_off_type = pd.get_dummies(df.offer_type.apply(pd.Series).stack()).sum(level=0)
-# sub = sub.join(df_off_type)
-# sub = sub.drop('offer_type', axis = 1)
-# df_off_type.columns = ['none', 'bogo', 'discount', 'informational']
-# sub = sub.drop('person_id', axis = 1)
-# sub = sub.drop('offer_id', axis = 1)
-# sub = sub.drop('membership_start', axis = 1)
-#
-# df_a_b = pd.get_dummies(df.age_bracket.apply(pd.Series).stack()).sum(level=0)
-# sub = sub.join(df_a_b)
-# sub = sub.drop('age_bracket', axis = 1)
-# sub
-#
-# sub.person_index.unique().tolist()
-df['profit'] = (sub.amount - sub.reward)
-# sub
-# sub[sub.person_index == 98]
