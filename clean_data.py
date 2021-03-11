@@ -388,7 +388,7 @@ def fill_income_nan(df, filename = 'income_pred.sav', rs = 42, build_model = Fal
     '''
 
     if build_model == True:
-        income_model = create_income_model(df, )
+        income_model = create_income_model(df, score = score_model)
     else:
         income_model = pickle.load(open(filename, 'rb'))
 
@@ -508,7 +508,7 @@ def clean_data(build_model = False, rs = 42, score = False, compute_nans = True)
             full_df = fill_gender_nan(full_df)
             print('Finished Gender')
     else:
-        df = df[df['gender'].notna()].copy()
+        full_df = full_df[full_df['gender'].notna()].copy()
     # The Rest
     for x in full_df.columns:
         try:
@@ -518,5 +518,5 @@ def clean_data(build_model = False, rs = 42, score = False, compute_nans = True)
     print('Clean Completed')
     return full_df
 
-clean_df = clean_data()
-clean_df.to_pickle('./clean_data.pkl')
+clean_df = clean_data(compute_nans = False)
+clean_df.to_pickle('./dropped_clean_data.pkl')
