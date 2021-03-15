@@ -7,7 +7,17 @@ import matplotlib.pyplot as plt
 from scipy.stats.stats import pearsonr
 
 # Get Data and Process it
-transcript_df, portfolio_df, profile_df = clean_data()
+portfolio_df_dirty = pd.read_json('data/portfolio.json', lines = True)
+profile_df_dirty = pd.read_json('data/profile.json', lines = True)
+transcript_df_dirty = pd.read_json('data/transcript.json', lines = True)
+
+# Clean data
+profile_df = clean_profile_df(profile_df_dirty)
+transcript_df = clean_transcript_df(transcript_df_dirty)
+portfolio_df = clean_portfolio_df(portfolio_df_dirty)
+
+transcript_df, portfolio_df, profile_df  = id_simpify(transcript_df, portfolio_df, profile_df)
+full_df = pre_model_process(transcript_df, portfolio_df, profile_df)
 
 part_over_df = transcript_df.merge(profile_df, on= ['person_id', 'person_index'], how = 'outer')
 unclean_full_df = part_over_df.merge(portfolio_df, on= ['offer_id', 'offer_index'], how = 'outer')

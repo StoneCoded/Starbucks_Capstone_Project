@@ -96,7 +96,7 @@ def income_brackets(df):
     '''
     bins = [10000,50000,90000,130000]
     labels = ['low','medium','high']
-    df['income_bracket'] = pd.cut((df['income'].applymap(type) == str).all(0), bins=bins, labels=labels, right=False)
+    df['income_bracket'] = pd.cut(df['income'], bins=bins, labels=labels, right=False)
 
     return df
 
@@ -168,7 +168,6 @@ def pre_model_process(transcript_df, portfolio_df, profile_df):
     model_df = process_df(model_df)
 
     #prep for modelling
-    model_df.drop(['person_id','offer_id'], axis = 1, inplace = True)
     model_df.age.replace(118, np.nan, inplace = True)
     model_df['ordinal_ms'] = model_df['membership_start'].map(datetime.toordinal).to_frame()
     model_df.drop(['membership_start'], axis = 1, inplace = True)
@@ -232,6 +231,7 @@ def create_age_model(df, filename = 'age_pred.sav', rs = 42, score = False):
     if score == True:
         model_scoring(age_model, X_test, y_test, y_pred, skfold = False)
     return age_model
+
 def create_income_model(df, filename = 'income_pred.sav', rs = 42, score = False):
     '''
     ARGS:
@@ -438,7 +438,7 @@ def fill_gender_nan(df, filename = 'gender_pred.sav', rs = 42, build_model = Fal
 
     return df
 
-def clean_data(build_model = False, rs = 42, score = False, compute_nans = True):
+def clean_data(build_model = True, rs = 42, score = False, compute_nans = True):
     '''
     ARGS:
     build_models     - Choose whether to rebuild models using functions or load
@@ -518,5 +518,5 @@ def clean_data(build_model = False, rs = 42, score = False, compute_nans = True)
     print('Clean Completed')
     return full_df
 
-clean_df = clean_data(compute_nans = False)
-clean_df.to_pickle('./dropped_clean_data.pkl')
+clean_df = clean_data(compute_nans = True)
+clean_df.to_pickle('./clean_data.pkl')
