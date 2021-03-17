@@ -517,6 +517,6 @@ def clean_data(build_model = True, rs = 42, score = False, compute_nans = True):
             continue
     print('Clean Completed')
     return full_df
-
-clean_df = clean_data(compute_nans = True)
-clean_df.to_pickle('./clean_data.pkl')
+#
+# clean_df = clean_data(compute_nans = True)
+# clean_df.to_pickle('./clean_data.pkl')
