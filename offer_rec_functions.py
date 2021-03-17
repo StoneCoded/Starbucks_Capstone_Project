@@ -3,8 +3,7 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression, LinearRegression, BayesianRidge, Lasso
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn import preprocessing
 import pickle
 
@@ -26,8 +25,30 @@ def member_length(df):
     df['member_length'] = df['member_length'] - mem_diff
     df = df.drop(['ordinal_ms'], axis = 1)
     return df
+def load_base_data(trans = False, port = False, prof = False):
+    '''
+    Duh.....
+    '''
+    portfolio_df_dirty = pd.read_json('data/portfolio.json', lines = True)
+    profile_df_dirty = pd.read_json('data/profile.json', lines = True)
+    transcript_df_dirty = pd.read_json('data/transcript.json', lines = True)
 
-def load_data():
+    # Clean data
+    profile_df = clean_profile_df(profile_df_dirty)
+    transcript_df = clean_transcript_df(transcript_df_dirty)
+    portfolio_df = clean_portfolio_df(portfolio_df_dirty)
+
+    transcript_df, portfolio_df, profile_df  = id_simpify(transcript_df, portfolio_df, profile_df)
+
+    if trans == True:
+        return transcript_df
+    if port == True:
+        return portfolio_df
+    if prof == True:
+        return profile_df
+    else:
+        return transcript_df, portfolio_df, profile_df
+def load_data(filename = './data/dropped_clean_data.pkl'):
     '''
     ARGS: None
 
@@ -37,7 +58,7 @@ def load_data():
     from processing.
 
     '''
-    df = pd.read_pickle('./dropped_clean_data.pkl')
+    df = pd.read_pickle(filename)
 
     df['event_offer completed'] = np.where((df['event_offer received'] == 0) & (df['event_transaction'] == 0), 1, 0)
     df['all_offers'] = df['event_offer received'] + df['event_offer completed']
@@ -46,7 +67,7 @@ def load_data():
 
     return df
 
-def predict_offers(df):
+def predict_offers(df, trans_id):
     '''
     ARGS: df - Starbucks DataFrame
 
@@ -63,7 +84,7 @@ def predict_offers(df):
     # offer_index 6 is transactions
     for n in range(1, (user_df['offer_index'].nunique() + 2)):
         offer_dict[f"offer_{n}"] = user_df[user_df['offer_index'] == n].copy()
-        offer_dict['offer_6'] = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
+        offer_dict[f'offer_{trans_id}'] = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
         X = offer_dict[f'offer_{n}'].iloc[:,2:].copy()
 
         X = pd.get_dummies(X)
@@ -81,8 +102,7 @@ def predict_offers(df):
         model_dict[f'offer_{n}'] = model
 
     return model_dict, success_accuracy
-
-def predict_amount(df):
+def predict_amount(df, trans_id):
     '''
     ARGS: df - Starbucks DataFrame
 
@@ -90,7 +110,6 @@ def predict_amount(df):
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
     '''
-    df = starbucks_df.copy()
     user_df = df[df['offer_type'] != 'transaction'].copy()
     user_df = user_df[['offer_index', 'amount', 'gender', 'age', 'income', 'member_length']].copy()
 
@@ -100,7 +119,7 @@ def predict_amount(df):
     # offer_index 6 is transactions
     for n in range(1, (user_df['offer_index'].nunique() + 2)):
         offer_dict[f"offer_{n}"] = user_df[user_df['offer_index'] == n].copy()
-        offer_dict['offer_6'] = df[['offer_index', 'amount', 'gender', 'age', 'income', 'member_length']].copy()
+        offer_dict[f'offer_{trans_id}'] = df[['offer_index', 'amount', 'gender', 'age', 'income', 'member_length']].copy()
         X = offer_dict[f'offer_{n}'].iloc[:,2:].copy()
 
         X = pd.get_dummies(X)
@@ -118,10 +137,6 @@ def predict_amount(df):
         model_dict[f'offer_{n}'] = model
 
     return model_dict, success_r2
-
-starbucks_df = load_data()
-offer_df = starbucks_df.groupby(['offer_index','offer_id','offer_type'])\
-                                    .count().reset_index().iloc[:,:3].copy()
 
 def pre_pred_data(df):
     '''
@@ -147,17 +162,15 @@ def pre_pred_data(df):
                                 'gender_M', 'gender_O']].copy()
     return user_df
 
+#
+# pred_cols = ['age', 'income', 'member_length', 'gender_F', 'gender_M', 'gender_O']
+# offer_dict, accuracy = predict_offers(starbucks_df)
+# amount_dict, r2 = predict_amount(starbucks_df)
+# user_df = pre_pred_data(starbucks_df)
 
-pred_cols = ['age', 'income', 'member_length', 'gender_F', 'gender_M', 'gender_O']
-offer_dict, accuracy = predict_offers(starbucks_df)
-amount_dict, r2 = predict_amount(starbucks_df)
-user_df = pre_pred_data(starbucks_df)
-
-
-
-def predict(user_index):
-
-    user_value = user_df[user_df.person_index == user_index].loc[:,pred_cols]
+def predict(user_index, df, offer_dict, amount_dict):
+    pred_cols = ['age', 'income', 'member_length', 'gender_F', 'gender_M', 'gender_O']
+    user_value = df[df.person_index == user_index].loc[:,pred_cols]
 
     offer_num = []
     offer_preds = []
@@ -170,13 +183,8 @@ def predict(user_index):
         d = {'offer_index' : offer_num, 'offer_success' : offer_preds,
             'predicted_amount' : offer_amount}
         predict_df = pd.DataFrame(d)
-        
+
     return predict_df
-
-
-
-user_df.columns
-
 
 '''
 For next time.
@@ -187,22 +195,4 @@ We want to show the chance of success by each offer type
 For Now:
 - Build Class.
 
-
 '''
-
-
-
-
-
-amt_models, r2_scores = predict_amount(starbucks_df)
-
-for n in range(1, 12):
-    user_df[f'offer_{n}_amnt'] = amt_models[f'offer_{n}'].predict(user_df.iloc[:,1:7])
-
-user_df.describe()
-
-for n in range(1, 12):
-    # user_df[f'offer_{n}'] = model_dict[f'offer_{n}'].predict(user_df.iloc[:,1:7])
-    pred_cols = ['age', 'income', 'member_length', 'gender_F', 'gender_M', 'gender_O']
-    user_idx = 1
-    print((amt_models[f'offer_{n}'].predict(user_df.loc[1:3,pred_cols])))
