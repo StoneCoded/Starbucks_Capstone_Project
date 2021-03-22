@@ -44,11 +44,12 @@ def clean_transcript_df(df):
     df['offer_id'] = [x.get('offer_id') for x in df.iloc[:, 2]]
     df['offer_id'].fillna(df['offer id'], inplace = True)
     df = df.drop(['value','offer id'], axis = 1)
-    df['time'] = df['time'].div(24)
+    df['days_elapsed'] = df['time'].div(24)
     # Duplicates hint user has received multiple of the same offer
     df = df.drop_duplicates()
-    df.columns = ['person_id', 'event', 'days_elapsed', 'amount', 'reward', 'offer_id']
+    df.columns = ['person_id', 'event', 'hours_elapsed', 'amount', 'reward', 'offer_id', 'days_elapsed']
     return df
+
 
 def clean_portfolio_df(df):
     # take channels out of lists and makes dummies of them
@@ -58,6 +59,7 @@ def clean_portfolio_df(df):
     df.columns = ['offer_reward', 'difficulty', 'duration', 'offer_type', \
                                     'offer_id', 'email', 'mobile', 'social', 'web']
     return df
+
 
 def clean_profile_df(df):
     #where gender and income == NaN is also where age is 118, so dropping all
@@ -71,6 +73,7 @@ def clean_profile_df(df):
     df['membership_start'] = pd.to_datetime(df.membership_start)
 
     return df
+
 
 def id_simpify(transcript_df, portfolio_df, profile_df):
     '''
@@ -119,7 +122,9 @@ def id_simpify(transcript_df, portfolio_df, profile_df):
     transcript_df = transcript_df.merge(offer_encode_df, on = 'offer_id', how = 'left')
 
     return transcript_df, portfolio_df, profile_df
-def pre_model_process(transcript_df, portfolio_df, profile_df):
+
+
+def pre_process(transcript_df, portfolio_df, profile_df):
     '''
     ARGS:
     transcript_df - Transcript Dataframe
@@ -134,17 +139,15 @@ def pre_model_process(transcript_df, portfolio_df, profile_df):
 
     '''
     part_df = transcript_df.merge(profile_df, on= ['person_id', 'person_index'], how = 'outer')
-    model_df = part_df.merge(portfolio_df, on= ['offer_id', 'offer_index'], how = 'outer')
+    full_df = part_df.merge(portfolio_df, on= ['offer_id', 'offer_index'], how = 'outer')
 
-    model_df = process_df(model_df)
+    full_df = process_df(full_df)
 
-    #prep for modelling
-    model_df.age.replace(118, np.nan, inplace = True)
-    model_df['ordinal_ms'] = model_df['membership_start'].map(datetime.toordinal).to_frame()
-    model_df.drop(['membership_start'], axis = 1, inplace = True)
-    model_df = pd.get_dummies(model_df, columns = ['event'], drop_first = True)
+    full_df['ordinal_ms'] = full_df['membership_start'].map(datetime.toordinal).to_frame()
+    full_df.drop(['membership_start'], axis = 1, inplace = True)
+    full_df = pd.get_dummies(full_df, columns = ['event'], drop_first = False)
 
-    return model_df
+    return full_df
 
 
 def clean_data():
@@ -179,31 +182,58 @@ def clean_data():
     portfolio_df = clean_portfolio_df(portfolio_df_dirty)
 
     transcript_df, portfolio_df, profile_df  = id_simpify(transcript_df, portfolio_df, profile_df)
-    full_df = pre_model_process(transcript_df, portfolio_df, profile_df)
     print('Loaded Up')
+    print('Beginning clean...')
+    full_df = pre_process(transcript_df, portfolio_df, profile_df)
     # Offer type
     full_df['offer_type'].fillna('transaction', inplace = True)
-
-    f_list = ['days_elapsed', 'person_index', 'offer_index', 'ordinal_ms',
-    'event_offer received','event_transaction']
-
-    for f in f_list:
-        full_df[f].fillna(0, inplace = True)
-
     full_df = full_df[full_df['gender'].notna()].copy()
+
     # The Rest
     for x in full_df.columns:
         try:
             full_df[x].fillna(0, inplace = True)
         except:
             continue
-    # model_df['ordinal_ms'] = model_df['membership_start'].map(datetime.toordinal).to_frame()
-    # model_df.drop(['membership_start'], axis = 1, inplace = True)
 
     print('Clean Completed')
     return full_df
 
 
+def save_data():
+    '''
+    ARGS: None
 
-# clean_df = clean_data(compute_nans = True)
-# clean_df.to_pickle('./data/clean_data.pkl')
+    RETURNS: None
+    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Saves as a pickle file:
+            - a cleaned dataframe
+            - cleaned dataframes at 0, 6, 12, 18 hours into each day. As all offers
+              are sent out at hour 0 of each day, the failed offers are added into
+              6, 12 and 18 hour dataframes for modelling.
+
+    '''
+
+    clean_df = clean_data()
+    failed_df = clean_df[clean_df['success'] == 0]
+
+    sb_hour0  = clean_df[clean_df['hours_elapsed'] % 24 == 0]
+
+    sb_hour6  = clean_df[clean_df['hours_elapsed'] % 24 == 6]
+    sb6_odx = sb_hour6['offer_index'].unique().tolist()
+    sb_hour6 = sb_hour6.append(failed_df[failed_df['offer_index'].isin(sb6_odx)])
+
+    sb_hour12 = clean_df[clean_df['hours_elapsed'] % 24 == 12].append(failed_df)
+    sb12_odx = sb_hour6['offer_index'].unique().tolist()
+    sb_hour12 = sb_hour6.append(failed_df[failed_df['offer_index'].isin(sb12_odx)])
+
+    sb_hour18 = clean_df[clean_df['hours_elapsed'] % 24 == 18].append(failed_df)
+    sb18_odx = sb_hour6['offer_index'].unique().tolist()
+    sb_hour18 = sb_hour6.append(failed_df[failed_df['offer_index'].isin(sb18_odx)])
+
+
+    clean_df.to_pickle('./data/clean_data.pkl')
+    sb_hour0.to_pickle('./data/sb_hour0.pkl')
+    sb_hour6.to_pickle('./data/sb_hour6.pkl')
+    sb_hour12.to_pickle('./data/sb_hour12.pkl')
+    sb_hour18.to_pickle('./data/sb_hour18.pkl')

@@ -58,6 +58,7 @@ def trans_comp_sort(df):
         df.drop(df.index[np.unique(drop_list)], inplace = True)
         df.reset_index(drop = True, inplace = True)
     return df
+
 def received_sort(df):
     '''
     ARGS: df - DataFrame
@@ -65,7 +66,7 @@ def received_sort(df):
     RETURNS: df - DataFrame
 
     ––––––––––––––––––––––––––––––––––––––––––––––––––
-    A completed offer is generally determined a success. By filtering out
+    A completed offer is generally determined as a success. By filtering out
     the offers received that went onto be successful we can see the unsuccessful
     offers and learn from them.
 
@@ -79,9 +80,10 @@ def received_sort(df):
     last_rec_time = -1
     last_comp_time = -1
 
-    #index variables
+    #index variables r = received, c = completed, o = offer
     r_idx = -1
     c_idx = -1
+
     o_idx = -1
     o_idx_2 = -1
 
@@ -107,6 +109,7 @@ def received_sort(df):
 
         elif df.loc[m, 'event'] == 'offer completed':
             last_comp_time = df.loc[m, 'days_elapsed']
+
             p_id_c = df.loc[m, 'person_id']
             o_idx_2 = df.loc[m, 'offer_id']
 
@@ -115,6 +118,7 @@ def received_sort(df):
 
             if (time_diff > 0) & (p_id_r == p_id_c) & (o_idx == o_idx_2):
                 drop_list.append(r_idx)
+                # df.at[m, 'days_to_complete'] = time_elap
             else:
                 continue
 
@@ -122,6 +126,7 @@ def received_sort(df):
         df.drop(df.index[np.unique(drop_list)], inplace = True)
         df.reset_index(drop = True, inplace = True)
     return df
+
 def viewed_sort(df):
     '''
     ARGS: df - DataFrame
@@ -134,6 +139,7 @@ def viewed_sort(df):
     df = df[df['event'] != 'offer viewed']
     df.reset_index(drop = True, inplace = True)
     return df
+
 def informational_sort(df):
     '''
     ARGS: df - DataFrame
@@ -191,6 +197,7 @@ def informational_sort(df):
                     df.at[i_idx, 'amount'] = df.loc[m, 'amount']
                     df.at[i_idx, 'days_elapsed'] = df.loc[m, 'days_elapsed']
                     df.at[i_idx, 'success'] = 1
+                    # df.at[i_idx, 'days_to_complete'] = time_elap
 
     if len(drop_list) > 0:
         #drop transactions
@@ -223,6 +230,7 @@ def process_df(df, trans_comp = True, rec_sort = True, view_sort = True, info_so
     data for a later processing thus not limiting choice.
 
     '''
+    # df['days_to_complete'] = np.nan #####
     if trans_comp == True:
         df = trans_comp_sort(df)
     if trans_comp == True:
