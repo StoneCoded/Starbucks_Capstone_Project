@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 from process_data import *
 from matplotlib import pyplot as plt
+from numpy import percentile
 
 import pickle
 
@@ -30,9 +31,6 @@ value - (dict of strings) - either an offer id or transaction amount depending o
 –––––––––––––––––––––––––––File Overview–––––––––––––––––––––––––––––
 Each fuction has its own doc string that describes the purpose of each.
 
-Initally I wanted to save the model builds and use them further on but they are
-HUGE files. So I will refactor this at a later date to disable the saving ability
-but for now I will just export the cleaned data.
 '''
 
 def clean_transcript_df(df):
@@ -64,7 +62,7 @@ def clean_portfolio_df(df):
 def clean_profile_df(df):
     #where gender and income == NaN is also where age is 118, so dropping all
     #eranious values
-    # df = df.gender.reset_index(drop = True)
+
     df.columns = ['gender', 'age', 'person_id', 'membership_start','income']
 
     df['membership_start'] = [datetime.strptime(str(x), '%Y%m%d').\
@@ -122,6 +120,29 @@ def id_simpify(transcript_df, portfolio_df, profile_df):
     transcript_df = transcript_df.merge(offer_encode_df, on = 'offer_id', how = 'left')
 
     return transcript_df, portfolio_df, profile_df
+
+def remove_outliers(df, col):
+    '''
+    ARGS:
+    df      - Dataframe
+    col     - Column Name
+
+    RETURNS:
+    df      - DataFrame
+    –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Returns input dataframe but only with rows that fit the input column inter
+    quartile range (k = 1.5).
+    '''
+    # sub_df = df[df['success'] == 1].copy()
+    q25 = df[col].describe()[4]
+    q75 = df[col].describe()[6]
+    iqr = (q75 - q25)
+    cut_off = iqr * 1.5
+    lower, upper = q25 - cut_off, q75 + cut_off
+
+    df = df[(df[col] > lower) & (df[col] < upper)]
+
+    return df
 
 
 def pre_process(transcript_df, portfolio_df, profile_df):
@@ -195,6 +216,7 @@ def clean_data():
             full_df[x].fillna(0, inplace = True)
         except:
             continue
+    full_df = remove_outliers(full_df, 'amount')
 
     print('Clean Completed')
     return full_df
@@ -215,25 +237,4 @@ def save_data():
     '''
 
     clean_df = clean_data()
-    failed_df = clean_df[clean_df['success'] == 0]
-
-    sb_hour0  = clean_df[clean_df['hours_elapsed'] % 24 == 0]
-
-    sb_hour6  = clean_df[clean_df['hours_elapsed'] % 24 == 6]
-    sb6_odx = sb_hour6['offer_index'].unique().tolist()
-    sb_hour6 = sb_hour6.append(failed_df[failed_df['offer_index'].isin(sb6_odx)])
-
-    sb_hour12 = clean_df[clean_df['hours_elapsed'] % 24 == 12].append(failed_df)
-    sb12_odx = sb_hour6['offer_index'].unique().tolist()
-    sb_hour12 = sb_hour6.append(failed_df[failed_df['offer_index'].isin(sb12_odx)])
-
-    sb_hour18 = clean_df[clean_df['hours_elapsed'] % 24 == 18].append(failed_df)
-    sb18_odx = sb_hour6['offer_index'].unique().tolist()
-    sb_hour18 = sb_hour6.append(failed_df[failed_df['offer_index'].isin(sb18_odx)])
-
-
     clean_df.to_pickle('./data/clean_data.pkl')
-    sb_hour0.to_pickle('./data/sb_hour0.pkl')
-    sb_hour6.to_pickle('./data/sb_hour6.pkl')
-    sb_hour12.to_pickle('./data/sb_hour12.pkl')
-    sb_hour18.to_pickle('./data/sb_hour18.pkl')
