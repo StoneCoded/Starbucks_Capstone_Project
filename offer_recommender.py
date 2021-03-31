@@ -50,7 +50,7 @@ class Offer_Recommender():
         self.amount_model, self.amount_r2, self.amount_mse, self.offers = build_models(self.starbucks_df)
 
 
-    def create_new_person(self, age, income, membership_length, gender):
+    def predict_new_person(self, age, income, membership_length, gender):
         '''
         ARGS:
                 age               - (int) Age for New Person, must be older than
@@ -99,7 +99,7 @@ class Offer_Recommender():
         self.predictions, self.user_value, self.user_data =  predictor(self.extra_df, 999999, self.success_model, self.amount_model)
         self.compare = self.predictions.merge(self.offers, on = 'offer_index')
 
-    def offer_predict(self, person_idx):
+    def predict_person(self, person_idx):
         '''
         ARGS:   person_idx        - Int index of person
 
@@ -122,7 +122,7 @@ class Offer_Recommender():
             self.predictions, self.user_value, self.user_data =  predictor(self.starbucks_df, person_idx, self.success_model, self.amount_model)
             self.compare = self.predictions.merge(self.offers, on = 'offer_index')
 
-    def offer_predict_comparision(self, filename = './data/amount_prediction_full_3.pkl'):
+    def person_predict_all(self, filename = './data/amount_prediction_full_3.pkl'):
 
         '''
         ####################-TIME CONSUMPTION WARNING-##########################
@@ -136,7 +136,7 @@ class Offer_Recommender():
         1000 files a print statement lets you know how many thousand are left to
         predict (On my laptop, 2-3 hours).
         '''
-        check = input("You want to continue?, Enter Y to continue")
+        check = input("Are you sure you want to continue? It takes a while, enter Y to continue")
         if check != 'Y':
             print('function abandoned...')
 
