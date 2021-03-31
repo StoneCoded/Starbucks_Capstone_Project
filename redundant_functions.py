@@ -1,31 +1,42 @@
+'''
+The functions below were largely used to try and compute NaN values. This is 
+an area I believe an be improved upon so for the time being, these functions will
+be set asside until time can be allocated to address them.
+
+Each Function has a docstring that describes its intended use.
+
+Note: No functions in this file are intended to be used here and will not run unless
+used elsewhere and the appropriate libraries imported.
+'''
+
 
 def age_brackets(df):
-'''
-ARGS:    df - DataFrame
+    '''
+    ARGS:    df - DataFrame
 
-RETURNS :df - DataFrame
-––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-Fits 'age' columns into 10 year bins to form a general age category
-'''
-bins = [18,25,35,45,55,65,75,85,95,105]
-labels = ['18-24','25-34','35-44','45-54','55-64','65-74','75-84','85-94','95-104']
-df['age_bracket'] = pd.cut(df['age'], bins=bins, labels=labels, right=False)
+    RETURNS :df - DataFrame
+    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Fits 'age' columns into 10 year bins to form a general age category
+    '''
+    bins = [18,25,35,45,55,65,75,85,95,105]
+    labels = ['18-24','25-34','35-44','45-54','55-64','65-74','75-84','85-94','95-104']
+    df['age_bracket'] = pd.cut(df['age'], bins=bins, labels=labels, right=False)
 
-return df
+    return df
 
 def income_brackets(df):
-'''
-ARGS:    df - DataFrame
+    '''
+    ARGS:    df - DataFrame
 
-RETURNS: df - DataFrame
-––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-Fits 'income' rows into 3 year bins to form a general income category
-'''
-bins = [10000,50000,90000,130000]
-labels = ['low','medium','high']
-df['income_bracket'] = pd.cut(df['income'], bins=bins, labels=labels, right=False)
+    RETURNS: df - DataFrame
+    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Fits 'income' rows into 3 year bins to form a general income category
+    '''
+    bins = [10000,50000,90000,130000]
+    labels = ['10k-49k','50k-89k','90k+']
+    df['income_bracket'] = pd.cut(df['income'], bins=bins, labels=labels, right=False)
 
-return df
+    return df
 
 def pre_model_process(transcript_df, portfolio_df, profile_df):
     '''
@@ -53,8 +64,6 @@ def pre_model_process(transcript_df, portfolio_df, profile_df):
     model_df = pd.get_dummies(model_df, columns = ['event'], drop_first = True)
 
     return model_df
-
-
 
 def fill_age_nan(df, filename = 'age_pred.sav', rs = 42, build_model = False, score_model = False):
     '''
@@ -165,8 +174,6 @@ def fill_gender_nan(df, filename = 'gender_pred.sav', rs = 42, build_model = Fal
     df['gender'].fillna(df['pred_gender'], inplace = True)
 
     return df
-
-
 
 def model_scoring(model, X_test, y_test, y_pred, skfold = True):
     print(f"Validating {model}")
@@ -322,8 +329,6 @@ def create_gender_model(df, filename = 'gender_pred.sav', rs = 42, score = False
     if score == True:
         model_scoring(gender_model, X_test, y_test, y_pred)
     return gender_model
-
-
 
 def fill_age_nan(df, filename = 'age_pred.sav', rs = 42, build_model = False, score_model = False):
     '''
@@ -511,38 +516,3 @@ def clean_data(build_model = True, rs = 42, score = False, compute_nans = True):
             continue
     print('Clean Completed')
     return full_df
-
-def new_person_check(person_index, age, income, membership_length, gender):
-    '''
-    ARGS :
-    person_index - (int) Index for New Person, must be unique and not current
-                   person database
-    age          - (int) Age for New Person, must be older than 0 and younger that 120
-    income       - (int/float) Income for New Person, must be between 0 and 140000.0
-    membership_length - (int) Membership length in days
-    gender       - (str) Gender - 'F' = Female
-                                - 'M' = Male
-                                - 'O' = Other
-    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-    Performs checks on values used for creating a new user for prediction
-    '''
-    assert isinstance(age, int)
-    assert (age > 0) & (age < 120)
-
-    assert isinstance(income, int) | isinstance(income, float)
-    assert (income > 0) & (income < 140000)
-
-    assert isinstance(membership_length, int)
-    assert (membership_length >= 0)
-
-    assert isinstance(gender, str)
-    assert gender in ['F','M','O','f','m','o']
-
-    if gender in ['F','f']:
-        gender = 'F'
-    elif gender in ['M','m']:
-        gender = 'M'
-    elif gender in ['O','o']:
-        gender = 'O'
-    values_checked = [person_index, age, income, membership_length, gender]
-    return values_checked

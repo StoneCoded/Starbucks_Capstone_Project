@@ -293,3 +293,47 @@ def predictor(df, full_df, person_idx):
     pred = pred.sort_values(by = 'offer_index', ascending = True).reset_index(drop = True)
 
     return success_accuracy, success_f1, amount_r2, amount_mse, pred, offers, user_value, user_data, success_model, amount_model
+
+def new_person_check(person_index, age, income, membership_length, gender):
+    '''
+    ARGS :
+    person_index - (int) Index for New Person, must be unique and not current
+                   person database
+    age          - (int) Age for New Person, must be older than 0 and younger that 120
+    income       - (int/float) Income for New Person, must be between 0 and 140000.0
+    membership_length - (int) Membership length in days
+    gender       - (str) Gender - 'F' = Female
+                                - 'M' = Male
+                                - 'O' = Other
+    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Performs checks on values used for creating a new user for prediction
+    '''
+    assert isinstance(age, int)
+    assert (age > 0) & (age < 120)
+
+    assert isinstance(income, int) | isinstance(income, float)
+    assert (income > 0) & (income < 140000)
+
+    assert isinstance(membership_length, int)
+    assert (membership_length >= 0)
+
+    assert isinstance(gender, str)
+    assert gender in ['F','M','O','f','m','o']
+
+    if gender in ['F','f']:
+        gender = 'F'
+    elif gender in ['M','m']:
+        gender = 'M'
+    elif gender in ['O','o']:
+        gender = 'O'
+    values_checked = [person_index, age, income, membership_length, gender]
+    return values_checked
+
+
+
+t = load_data()
+t['ot'] = t['event_offer completed'] + t['event_offer received']
+plt.plot(t.groupby(['days_elapsed'])['ot'].count().index, t.groupby('days_elapsed')['ot'].sum().values)
+
+plt.plot(t.groupby(['days_elapsed'])['event_offer completed'].count().index, t.groupby('days_elapsed')['event_offer completed'].sum().values)
+plt.plot(t.groupby('days_elapsed')['event_transaction'].count().index,t.groupby('days_elapsed')['event_transaction'].sum().values)

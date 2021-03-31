@@ -34,6 +34,16 @@ Each fuction has its own doc string that describes the purpose of each.
 '''
 
 def clean_transcript_df(df):
+    '''
+    ARGS: df - DataFrame(transcript_df)
+
+    RETURNS: df - DataFrame
+    –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Unpacks Offer_id, amount and reward from list of dictionaries. Creates a
+    days_elapsed column, renames some columns for clarity.
+
+
+    '''
     take_available = lambda s1, s2: s1 if s1 == True else s2
     # Get values out of dict
     df['amount'] = [x.get('amount') for x in df.iloc[:, 2]]
@@ -44,13 +54,21 @@ def clean_transcript_df(df):
     df = df.drop(['value','offer id'], axis = 1)
     df['days_elapsed'] = df['time'].div(24)
     # Duplicates hint user has received multiple of the same offer
-    df = df.drop_duplicates()
+    # df = df.drop_duplicates()
     df.columns = ['person_id', 'event', 'hours_elapsed', 'amount', 'reward', 'offer_id', 'days_elapsed']
     return df
 
 
+
 def clean_portfolio_df(df):
-    # take channels out of lists and makes dummies of them
+    '''
+    ARGS: df - DataFrame(portfolio_df)
+
+    RETURNS: df - DataFrame
+    –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Takes channels out of lists and makes dummies of them
+    '''
+
     portfolio_channels = pd.get_dummies(df.channels.apply(pd.Series).stack()).sum(level=0)
     df = df.join(portfolio_channels)
     df = df.drop('channels', axis = 1)
@@ -60,14 +78,17 @@ def clean_portfolio_df(df):
 
 
 def clean_profile_df(df):
-    #where gender and income == NaN is also where age is 118, so dropping all
-    #eranious values
+    '''
+    ARGS: df - DataFrame(profile_df)
+
+    RETURNS: df - DataFrame
+    –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Renames columns, converts membership_start from string to datetime
+    '''
 
     df.columns = ['gender', 'age', 'person_id', 'membership_start','income']
-
     df['membership_start'] = [datetime.strptime(str(x), '%Y%m%d').\
                         strftime('%m/%d/%Y') for x in df.membership_start]
-
     df['membership_start'] = pd.to_datetime(df.membership_start)
 
     return df
@@ -95,6 +116,7 @@ def id_simpify(transcript_df, portfolio_df, profile_df):
     offer_id                            offer_index
     9b98b8c7a33c4b65b9aebfe6a799e6d9 :  9
 
+    note: This works fine but is clumsy, will refactor/rewrite later.
     '''
     offer_ids = portfolio_df.offer_id.unique().tolist()
     offer_ids_2 = transcript_df.offer_id.unique().tolist()

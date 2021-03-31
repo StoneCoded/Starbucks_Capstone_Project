@@ -95,6 +95,8 @@ def received_sort(df):
     r_dur = -1
     time_diff = -1
 
+    viewed = False
+
     df = df.sort_values(by = ['person_index','offer_index','days_elapsed'])
     df.reset_index(drop = True, inplace = True)
     for m in range(len(df)):
@@ -107,7 +109,14 @@ def received_sort(df):
             r_idx = m
             r_dur = df.loc[m, 'duration']
 
+        elif df.loc[m, 'event'] == 'offer viewed':
+            if df.loc[m, 'offer_id'] == o_idx:
+                viewed = True
+            else:
+                viewed = False
+
         elif df.loc[m, 'event'] == 'offer completed':
+
             last_comp_time = df.loc[m, 'days_elapsed']
 
             p_id_c = df.loc[m, 'person_id']
@@ -116,7 +125,7 @@ def received_sort(df):
             time_elap = last_comp_time - last_rec_time
             time_diff = r_dur - time_elap
 
-            if (time_diff > 0) & (p_id_r == p_id_c) & (o_idx == o_idx_2):
+            if (time_diff > 0) & (p_id_r == p_id_c) & (o_idx == o_idx_2) & viewed == True:
                 drop_list.append(r_idx)
                 # df.at[m, 'days_to_complete'] = time_elap
             else:
@@ -125,6 +134,7 @@ def received_sort(df):
     if len(drop_list) > 0:
         df.drop(df.index[np.unique(drop_list)], inplace = True)
         df.reset_index(drop = True, inplace = True)
+
     return df
 
 def viewed_sort(df):
@@ -233,12 +243,12 @@ def process_df(df, trans_comp = True, rec_sort = True, view_sort = True, info_so
     # df['days_to_complete'] = np.nan #####
     if trans_comp == True:
         df = trans_comp_sort(df)
-    if trans_comp == True:
+    if rec_sort == True:
         df = received_sort(df)
-    if trans_comp == True:
-        df = viewed_sort(df)
-    if trans_comp == True:
+    if info_sort == True:
         df = informational_sort(df)
+    if view_sort == True:
+        df = viewed_sort(df)
 
     if success == True:
         df['success'] = df.event.apply(lambda x: 1 if (x == 'offer completed') | (x == 'transaction') else 0)

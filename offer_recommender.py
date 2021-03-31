@@ -75,7 +75,7 @@ class Offer_Recommender():
         self.extra_df.loc[999999] = new_df.xs(999999)
         self.success_accuracy, self.success_f1, self.amount_r2, self.amount_mse, self.predict, self.offers, \
         self.user_value, self.user_data, self.success_model, self.amount_model\
-         =  predictor(self.starbucks_df, self.starbucks_df, person_idx)
+         =  predictor(self.starbucks_df, self.extra_df, person_index)
 
         self.compare = self.predict.merge(self.offers, on = 'offer_index')
 
@@ -114,7 +114,7 @@ class Offer_Recommender():
 
             self.compare = self.predict.merge(self.offers, on = 'offer_index')
 
-    def offer_predict_comparision(self):
+    def offer_predict_comparision(self, filename = './data/amount_prediction_full_3.pkl'):
 
         '''
         ####################-TIME CONSUMPTION WARNING-##########################
@@ -128,49 +128,56 @@ class Offer_Recommender():
         1000 files a print statement lets you know how many thousand are left to
         predict (On my laptop, 2-3 hours).
         '''
+        check = input("You want to continue?, Enter Y to continue")
+        if check != 'Y':
+            print('function abandoned...')
 
-        ages = []
-        amounts = []
-        income = []
-        member_length = []
+        else:
 
-        gender_F = []
-        gender_M = []
-        gender_0 = []
+            ages = []
+            amounts = []
+            success = []
+            income = []
+            member_length = []
 
-        end = (len(t.user_list))
+            gender_F = []
+            gender_M = []
+            gender_0 = []
 
-        for n in t.user_list:
-            self.predict_new, self.user_value = predict_all(pre_pred_data(self.starbucks_df), \
-                        offer_dict = self.success_model, amount_dict = self.amount_model, \
-                        person_idx = n, offer_idx_list = self.offers.offer_index.tolist())
-            amounts.extend(t.predict_new.iloc[:,2])
+            end = (len(t.user_list))
 
-            for x in range(11):
-                ages.append(t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'age'].max())
-                income.append(t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'income'].max())
-                member_length.append(t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'member_length'].max())
-                gen = t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'gender'].max()
+            for n in t.user_list:
+                self.predict_new, self.user_value = predict_all(pre_pred_data(self.starbucks_df), \
+                            offer_dict = self.success_model, amount_dict = self.amount_model, \
+                            person_idx = n, offer_idx_list = self.offers.offer_index.tolist())
+                amounts.extend(t.predict_new.iloc[:,2])
+                success.extend(t.predict_new.iloc[:,1])
 
-                if gen == 'F':
-                    gender_F.append(1)
-                    gender_M.append(0)
-                    gender_0.append(0)
-                elif gen == 'M':
-                    gender_F.append(0)
-                    gender_M.append(1)
-                    gender_0.append(0)
-                elif gen == 'O':
-                    gender_F.append(0)
-                    gender_M.append(0)
-                    gender_0.append(1)
-            end -= 1
-            if (end % 1000 == 0):
-                print(end)
-            d = {'amount':amounts, 'age':ages, 'income':income, 'member_length':member_length, 'gender_F':gender_F, 'gender_M':gender_M, 'gender_O':gender_0}
+                for x in range(11):
+                    ages.append(t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'age'].max())
+                    income.append(t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'income'].max())
+                    member_length.append(t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'member_length'].max())
+                    gen = t.starbucks_df[t.starbucks_df.person_index == n].loc[:,'gender'].max()
+
+                    if gen == 'F':
+                        gender_F.append(1)
+                        gender_M.append(0)
+                        gender_0.append(0)
+                    elif gen == 'M':
+                        gender_F.append(0)
+                        gender_M.append(1)
+                        gender_0.append(0)
+                    elif gen == 'O':
+                        gender_F.append(0)
+                        gender_M.append(0)
+                        gender_0.append(1)
+                end -= 1
+                if (end % 1000 == 0):
+                    print(end)
+            d = {'amount':amounts, 'success':success, 'age':ages, 'income':income, 'member_length':member_length, 'gender_F':gender_F, 'gender_M':gender_M, 'gender_O':gender_0}
             amount_prediction = pd.DataFrame(d)
-            amount_prediction.to_pickle('./data/amount_prediction_full_2.pkl')
-
+            amount_prediction.to_pickle(filename)
+        print('finished.')
 
     def coef_(self):
         '''
@@ -192,17 +199,22 @@ class Offer_Recommender():
         for n in (range(1, len(self.amount_model) + 1)):
             am_coef.append(self.amount_model[f'offer_{n}'].coef_)
         self.amount_coef  = pd.DataFrame(am_coef, columns = self.user_value.columns)
-
+#
 t = Offer_Recommender()
 t.__load__()
-t.amount_r2
-t.amount_mse
-t.offer_predict(2)
-t.user_data
-t.compare
 
+
+# t.amount_mse
+t.offer_predict(2)
+t.create_new_person(55, 120000, 200,'M')
+
+t.amount_mse
+# t.user_data
+# t.compare
+#
 t.offer_predict_comparision()
 
+t.offers
 '''
 ____________________________Tomorrow's Plan_____________________________________
 Final Comparison.
