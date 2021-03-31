@@ -29,6 +29,27 @@ class Offer_Recommender():
         # self.starbucks_df = pd.read_pickle('./data/test.pkl')
         self.user_list = t.starbucks_df.person_index.unique().tolist()
 
+    def __build__(self):
+        '''
+        ARGS:
+                df                - DataFrame
+        RETURNS:
+                success_model     - Dictionary of prediction models for predicting
+                                    offer success.
+                success_accuracy  - accuracy score of success_model
+                success_f1        - f1 score of success_model
+                amount_model      - Dictionary of prediction models for predicting
+                                    offer amount.
+                amount_r2         - r2 score of amount_model
+                amount_mse        - mean_squared_error of amount model
+        ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+        Creates two model dictionaries containing predictions for all offers.
+
+        '''
+        self.success_model, self.success_accuracy, self.success_f1, \
+        self.amount_model, self.amount_r2, self.amount_mse, self.offers = build_models(self.starbucks_df)
+
+
     def create_new_person(self, age, income, membership_length, gender):
         '''
         ARGS:
@@ -62,7 +83,7 @@ class Offer_Recommender():
         DataFrame then predicts as per usual. To speed this up, the success/amount
         models should've been created already.
         '''
-        person_index = 999999
+
         new_df = pd.DataFrame(columns = ['person_id', 'hours_elapsed', 'amount', 'reward', 'offer_id',
        'days_elapsed', 'person_index', 'offer_index', 'gender', 'age',
        'income', 'offer_reward', 'difficulty', 'duration', 'offer_type',
@@ -70,33 +91,24 @@ class Offer_Recommender():
        'event_offer received', 'event_transaction', 'member_length'])
 
         new_df.loc[999999,:] = 0
-        new_df.loc[999999,['person_index', 'age', 'income', 'member_length', 'gender']] = new_person_check(person_index, age, income, membership_length, gender)
+        new_df.loc[999999,['person_index', 'age', 'income', 'member_length', 'gender']] = new_person_check(999999, age, income, membership_length, gender)
+
         self.extra_df = self.starbucks_df.copy()
         self.extra_df.loc[999999] = new_df.xs(999999)
-        self.success_accuracy, self.success_f1, self.amount_r2, self.amount_mse, self.predict, self.offers, \
-        self.user_value, self.user_data, self.success_model, self.amount_model\
-         =  predictor(self.starbucks_df, self.extra_df, person_index)
 
-        self.compare = self.predict.merge(self.offers, on = 'offer_index')
+        self.predictions, self.user_value, self.user_data =  predictor(self.extra_df, 999999, self.success_model, self.amount_model)
+        self.compare = self.predictions.merge(self.offers, on = 'offer_index')
 
     def offer_predict(self, person_idx):
         '''
         ARGS:   person_idx        - Int index of person
 
         RETURNS:
-                success_accuracy  - accuracy score of success_model
-                success_f1        - f1 score of success_model
-                amount_r2         - r2 score of amount_model
-                amount_mse        - mean_squared_error of amount model
                 predict           - DataFrame of predicted success and amount_s
                                     next to corresponding offer
                 offers            - DataFrame of Offer information
                 user_value        - Standardised user demographic info for prediction
                 user_data         - All rows from full dataframe corresponding to person_idx
-                success_model     - Dictionary of prediction models for predicting
-                                    offer success.
-                amount_model      - Dictionary of prediction models for predicting
-                                    offer amount.
                 compare           - Combines predict, and offers to show the full
                                     information of each offer next to the corresponding
                                     prediction.
@@ -107,12 +119,8 @@ class Offer_Recommender():
             print('Sorry friend, this user is not currently in the database')
             print('Try running with new_person, see docstring for help.')
         else:
-            # pre_pred_data(self.starbucks_df)
-            self.success_accuracy, self.success_f1, self.amount_r2, self.amount_mse, self.predict, self.offers, \
-            self.user_value, self.user_data, self.success_model, self.amount_model\
-             =  predictor(self.starbucks_df, self.starbucks_df, person_idx)
-
-            self.compare = self.predict.merge(self.offers, on = 'offer_index')
+            self.predictions, self.user_value, self.user_data =  predictor(self.starbucks_df, person_idx, self.success_model, self.amount_model)
+            self.compare = self.predictions.merge(self.offers, on = 'offer_index')
 
     def offer_predict_comparision(self, filename = './data/amount_prediction_full_3.pkl'):
 
@@ -199,22 +207,15 @@ class Offer_Recommender():
         for n in (range(1, len(self.amount_model) + 1)):
             am_coef.append(self.amount_model[f'offer_{n}'].coef_)
         self.amount_coef  = pd.DataFrame(am_coef, columns = self.user_value.columns)
-#
+
 t = Offer_Recommender()
 t.__load__()
+t.__build__()
+t.offer_predict(100)
+t.compare
+t.create_new_person(580, 1800000, 60, 'O')
+t.predictions
 
-
-# t.amount_mse
-t.offer_predict(2)
-t.create_new_person(55, 120000, 200,'M')
-
-t.amount_mse
-# t.user_data
-# t.compare
-#
-t.offer_predict_comparision()
-
-t.offers
 '''
 ____________________________Tomorrow's Plan_____________________________________
 Final Comparison.

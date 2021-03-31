@@ -3,11 +3,10 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, Lasso
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.metrics import f1_score, mean_squared_error
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.linear_model import SGDRegressor
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.svm import SVR
+from sklearn.preprocessing import StandardScaler
 import pickle
 
 from clean_data import *
@@ -85,9 +84,9 @@ def predict_success(df, trans_id):
                          if input file also changes so this makes sure to keep
                          track of it.
 
-    RETURN: model_dict - Dictionary of models for each possible offer
-            amount_r2  - r2 score of each amount model in model_dict
-            amount_mse - mean_squared_error of each amount model in model_dict
+    RETURN: model_dict       - Dictionary of models for each possible offer
+            success_accuracy - accuracy score of each success model in model_dict
+            amount_mse       - F1 score of each success model in model_dict
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     Uses Logistic Regression to predict success of an offer based off of
     demographic information alone.
@@ -99,27 +98,25 @@ def predict_success(df, trans_id):
     success_accuracy = []
     success_f1 = []
 
-
     offer_list = pred_df['offer_index'].unique().tolist()
     for offer_num in offer_list:
         offer_dict[f"offer_{offer_num}"] = pred_df[pred_df['offer_index'] == offer_num].copy()
         offer_dict[f'offer_{trans_id}'] = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
+
         X = offer_dict[f'offer_{offer_num}'].iloc[:,2:].copy()
-
         X = pd.get_dummies(X)
-        min_max_scaler = StandardScaler()
-        x_scaled = min_max_scaler.fit_transform(X.values)
 
-        X = pd.DataFrame(x_scaled, columns = X.columns)
         y = offer_dict[f'offer_{offer_num}'].iloc[:,1]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
 
         model = LogisticRegression()
         model.fit(X_train, y_train)
+
         success_accuracy.append([offer_num, model.score(X_test, y_test)])
         y_pred = model.predict(X_test)
         success_f1.append([offer_num, f1_score(y_test, y_pred)])
+
         model_dict[f'offer_{offer_num}'] = model
 
     return model_dict, success_accuracy, success_f1
@@ -147,23 +144,22 @@ def predict_amount(df, trans_id):
     amount_mse = []
 
     offer_list = pred_df['offer_index'].unique().tolist()
-    # for n in range(1, (pred_df['offer_index'].nunique() + 1)):
+
     for offer_num in offer_list:
         offer_dict[f"offer_{offer_num}"] = pred_df[pred_df['offer_index'] == offer_num].copy()
         offer_dict[f'offer_{trans_id}'] = df[['offer_index', 'amount', 'gender', 'age', 'income', 'member_length']].copy()
         X = offer_dict[f'offer_{offer_num}'].iloc[:,2:].copy()
 
         X = pd.get_dummies(X)
-        min_max_scaler = StandardScaler()
-        x_scaled = min_max_scaler.fit_transform(X.values)
+        scaler = StandardScaler()
+        x_scaled = scaler.fit_transform(X.values)
 
         X = pd.DataFrame(x_scaled, columns = X.columns)
         y = offer_dict[f'offer_{offer_num}'].iloc[:,1]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
-        # model = LinearRegression()
-        # model = DecisionTreeRegressor(max_depth = 2)
-        model = Ridge()
+
+        model = LinearRegression()
         model.fit(X_train, y_train)
         amount_r2.append([offer_num , model.score(X_test, y_test)])
         amount_mse.append([offer_num, mean_squared_error(y_test, model.predict(X_test))])
@@ -171,128 +167,105 @@ def predict_amount(df, trans_id):
 
     return model_dict, amount_r2, amount_mse
 
-def pre_pred_data(df):
+def pre_scale(df):
     '''
     ARGS : df - DataFrame
 
-    RETURNS: pre_pred_df - DataFrame
+    RETURNS: pre_scale_df - DataFrame
     ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     Takes Starbucks DataFrame and prepares it for prediction using models by
     filtering out redundant columns and scaling data.
     '''
     # Get each unique user's features
-    pre_pred_df_1 = df.groupby(['person_index', 'gender', 'age', 'income','member_length']).count().reset_index().iloc[:,:5].copy()
-    pre_pred_df = pd.get_dummies(pre_pred_df_1).copy()
-    # Scale
-    min_max_scaler = StandardScaler()
-    user_scaled = min_max_scaler.fit_transform(pre_pred_df.iloc[:,1:].values)
-    pre_pred_df = pd.DataFrame(user_scaled, columns = pre_pred_df.iloc[:,1:].columns)
-    pre_pred_df['person_index'] = pre_pred_df_1['person_index'].values
+    pre_pred_users = df.groupby(['person_index', 'gender', 'age', 'income','member_length']).count().reset_index().iloc[:,:5].copy()
+    pre_scale_df = pd.get_dummies(pre_pred_users).copy()
+
+    # Scale Features
+    scaler = StandardScaler()
+    user_scaled = scaler.fit_transform(pre_scale_df.iloc[:,1:].values)
+    pre_scale_df = pd.DataFrame(user_scaled, columns = pre_scale_df.iloc[:,1:].columns)
+    pre_scale_df['person_index'] = pre_pred_users['person_index'].values
 
     # re-order for no other reason than I find it slightly easier to read.
-    pre_pred_df = pre_pred_df[['person_index','age', 'income', 'member_length', 'gender_F',\
+    pre_scale_df = pre_scale_df[['person_index','age', 'income', 'member_length', 'gender_F',\
                                 'gender_M', 'gender_O']].copy()
-    return pre_pred_df
+    return pre_scale_df
 
-def predict_all(full_df, offer_dict, amount_dict, person_idx, offer_idx_list):
+def build_models(df):
     '''
     ARGS:
-    df          - Specific DataFrame
-    full_df     - Full DataFrame with all known persons
-    offer_dict  - Dictionary of offer success models
-    amount_dict - Dictionary of offer amount models
-    person_idx  - Int index of person
-
+            df                - DataFrame
     RETURNS:
-    predict_df  - DataFrame of predicted values next to corresponding offer
-    user_value  - Standardised value of user used for prediction
-
-    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-    Predicts success and transaction amount for every potential offer and returning
-    a DataFrame in order of transaction amount.
-    '''
-
-    pred_cols = ['age', 'income', 'member_length', 'gender_F', 'gender_M', 'gender_O']
-    user_value = full_df[full_df.person_index == person_idx].loc[:,pred_cols]
-    offer_preds = []
-    offer_amount = []
-
-    for offer_num in offer_idx_list:
-
-        offer_preds.extend(offer_dict[f'offer_{offer_num}'].predict(user_value))
-        offer_amount.extend(amount_dict[f'offer_{offer_num}'].predict(user_value))
-
-    d = {'offer_index' : offer_idx_list, 'offer_success' : offer_preds,
-        'predicted_amount' : offer_amount}
-
-    predict_df = pd.DataFrame(d)
-    # predict_df.predicted_amount = predict_df.predicted_amount * predict_df.offer_success
-    predict_df.predicted_amount = predict_df.predicted_amount.round(2)
-
-    return predict_df, user_value
-
-def predictor(df, full_df, person_idx):
-    '''
-    ARGS:
-            full_df           - Full DataFrame for user values
-            df                - DataFrame to train models on
-            person_idx        - index of person to be predicted
-            offer_dict        - Dictionary of offer success models
-            amount_dict       - Dictionary of offer amount models
-
-    RETURNS:
-            pred              - DataFrame of predicted values next to corresponding offer
             success_accuracy  - accuracy score of success_model
             success_f1        - f1 score of success_model
             amount_r2         - r2 score of amount_model
             amount_mse        - mean_squared_error of amount model
-            predict           - DataFrame of predicted success and amount_s
-                                next to corresponding offer
-            offers            - DataFrame of Offer information
-            user_value        - Standardised user demographic info for prediction
-            user_data         - All rows from full dataframe corresponding to person_idx
-            success_model     - Dictionary of prediction models for predicting
-                                offer success.
-            amount_model      - Dictionary of prediction models for predicting
-                                offer amount.
-            compare           - Combines predict, and offers to show the full
-                                information of each offer next to the corresponding
-                                prediction.
     ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-    Predicts success and transaction amount for every potential offer and returning
-    a DataFrame in order of transaction amount.
+    Creates two model dictionaries containing predictions for all offers.
+
     '''
-
-
-    # user_df = pre_pred_data(df)
-    full_user_df = pre_pred_data(full_df)
-
-    non_purchase_data = full_df[full_df['success'] == 0].copy()
-    purchase_data = full_df[full_df['success'] == 1].copy()
-    random_pd = purchase_data.sample(non_purchase_data.shape[0],random_state = 42).copy()
-    new_train_data = pd.concat([non_purchase_data, random_pd]).reset_index(drop=True)
-
-
-    portfolio = df[['offer_reward', 'difficulty', 'duration',
-                        'offer_type', 'offer_id', 'email', 'mobile', 'social',
-                        'web', 'offer_index']].copy()
-
-    offers = portfolio.groupby(['offer_index', 'offer_reward', 'difficulty',
+    offers = df.groupby(['offer_index', 'offer_reward', 'difficulty',
                         'duration', 'offer_type', 'offer_id', 'email', 'mobile',
-                        'social', 'web']).count().reset_index()
-
-    offer_list = df['offer_index'].unique().tolist()
-    user_data = full_df[full_df.person_index == person_idx]
+                        'social', 'web']).count().reset_index().iloc[:,:9].copy()
 
     trans_id = offers[offers['offer_type'] == 'transaction'].iloc[0,0]
 
     success_model, success_accuracy, success_f1 = predict_success(df, trans_id)
     amount_model, amount_r2, amount_mse = predict_amount(df, trans_id)
 
-    pred, user_value = predict_all(full_user_df, offer_dict = success_model, amount_dict = amount_model, person_idx = person_idx, offer_idx_list = offer_list)
-    pred = pred.sort_values(by = 'offer_index', ascending = True).reset_index(drop = True)
+    return success_model, success_accuracy, success_f1, amount_model, amount_r2, amount_mse, offers
 
-    return success_accuracy, success_f1, amount_r2, amount_mse, pred, offers, user_value, user_data, success_model, amount_model
+def predictor(df, person_idx, success_model_dict, amount_model_dict):
+    '''
+    ARGS:
+            df                - DataFrame
+            person_idx        - index of person to be predicted
+            offer_dict        - Dictionary of offer success models
+            amount_dict       - Dictionary of offer amount models
+
+    RETURNS:
+            predict           - DataFrame of predicted success and amount_s
+                                next to corresponding offer
+
+            user_value        - Standardised user demographic info for prediction
+            user_data         - All rows from full dataframe corresponding to person_idx
+    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Predicts success and transaction amount for every potential offer and returning
+    a DataFrame in order of transaction amount.
+    '''
+
+    unscaled_df  = df.groupby(['person_index', 'gender', 'age', 'income','member_length']).count().reset_index().iloc[:,:5].copy()
+    unscaled_df = pd.get_dummies(unscaled_df)
+
+    scaled_df = pre_scale(df)
+
+    user_data = unscaled_df[unscaled_df.person_index == person_idx]
+
+    # build data
+    pred_cols = ['age', 'income', 'member_length', 'gender_F', 'gender_M', 'gender_O']
+    suc_user_value = unscaled_df[unscaled_df.person_index == person_idx].loc[:, pred_cols]
+    am_user_value  = scaled_df[scaled_df.person_index == person_idx].loc[:, pred_cols]
+
+    # use models
+    offer_success = []
+    offer_amount = []
+    offer_list = df['offer_index'].unique().tolist()
+
+    for offer_num in offer_list:
+
+        offer_success.extend(success_model_dict[f'offer_{offer_num}'].predict(suc_user_value))
+        offer_amount.extend(amount_model_dict[f'offer_{offer_num}'].predict(am_user_value))
+
+    # store results
+    d = {'offer_index' : offer_list, 'predicted_success' : offer_success,
+        'predicted_amount' : offer_amount}
+
+    predict_df = pd.DataFrame(d)
+    predict_df.predicted_amount = predict_df.predicted_amount.round(2)
+    predict_df = predict_df.sort_values(by = 'offer_index', ascending = True).reset_index(drop = True)
+
+    return  predict_df, suc_user_value, user_data
+
 
 def new_person_check(person_index, age, income, membership_length, gender):
     '''
@@ -328,12 +301,3 @@ def new_person_check(person_index, age, income, membership_length, gender):
         gender = 'O'
     values_checked = [person_index, age, income, membership_length, gender]
     return values_checked
-
-
-
-t = load_data()
-t['ot'] = t['event_offer completed'] + t['event_offer received']
-plt.plot(t.groupby(['days_elapsed'])['ot'].count().index, t.groupby('days_elapsed')['ot'].sum().values)
-
-plt.plot(t.groupby(['days_elapsed'])['event_offer completed'].count().index, t.groupby('days_elapsed')['event_offer completed'].sum().values)
-plt.plot(t.groupby('days_elapsed')['event_transaction'].count().index,t.groupby('days_elapsed')['event_transaction'].sum().values)

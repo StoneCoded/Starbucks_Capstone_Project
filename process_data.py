@@ -95,39 +95,38 @@ def received_sort(df):
     r_dur = -1
     time_diff = -1
 
-    viewed = False
-
     df = df.sort_values(by = ['person_index','offer_index','days_elapsed'])
     df.reset_index(drop = True, inplace = True)
     for m in range(len(df)):
 
         if df.loc[m, 'event'] == 'offer received':
+            # update start time variable
             last_rec_time = df.loc[m, 'days_elapsed']
+            # update index for offer received/person
             p_id_r = df.loc[m, 'person_id']
             o_idx = df.loc[m, 'offer_id']
 
+            # update received index and offer duration
             r_idx = m
             r_dur = df.loc[m, 'duration']
 
-        elif df.loc[m, 'event'] == 'offer viewed':
-            if df.loc[m, 'offer_id'] == o_idx:
-                viewed = True
-            else:
-                viewed = False
-
         elif df.loc[m, 'event'] == 'offer completed':
-
+            # update end time variable
             last_comp_time = df.loc[m, 'days_elapsed']
 
+            # update person/offer index
             p_id_c = df.loc[m, 'person_id']
             o_idx_2 = df.loc[m, 'offer_id']
 
+            # calculate time taken to complete and difference from duration
             time_elap = last_comp_time - last_rec_time
             time_diff = r_dur - time_elap
 
-            if (time_diff > 0) & (p_id_r == p_id_c) & (o_idx == o_idx_2) & viewed == True:
+            # check if offer was completed during timeframe
+            if (time_diff > 0) & (p_id_r == p_id_c) & (o_idx == o_idx_2):
+                # if passed, add the received to a drop list
                 drop_list.append(r_idx)
-                # df.at[m, 'days_to_complete'] = time_elap
+
             else:
                 continue
 
@@ -163,7 +162,7 @@ def informational_sort(df):
     informational_sort removes 'transactions' if it is deamed successful and
     replaces the Offer Received as Offer Completed with all corresponding info.
     '''
-    #Initial Variables, (-1 as it doesn't exist in loop)
+    #Initial Variables, (-1 as it doesn't exist)
     success_list = []
     drop_list = []
     last_info_time = -1
@@ -174,6 +173,8 @@ def informational_sort(df):
     p_id_tt = -1
     i_dur = -1
     time_diff = -1
+
+    viewed = False
     #sort by time
     df = df.sort_values(by = ['person_index', 'days_elapsed', 'offer_index'])
     df.reset_index(drop = True, inplace = True)
@@ -187,6 +188,13 @@ def informational_sort(df):
             i_idx = m
             i_dur = df.loc[m, 'duration']
 
+        elif df.loc[m, 'event'] == 'offer viewed':
+            # check if informational offer has been viewed
+            if df.loc[m, 'offer_id'] == i_idx:
+                viewed = True
+            else:
+                viewed = False
+
         #find each transaction
         elif df.loc[m, 'event'] == 'transaction':
             last_trans_time = df.loc[m, 'days_elapsed']
@@ -195,7 +203,7 @@ def informational_sort(df):
             time_elap = last_trans_time - last_info_time
             time_diff = i_dur - time_elap
             #check if user is the same
-            if (time_diff >= 0) & (p_id_i == p_id_t):
+            if (time_diff >= 0) & (p_id_i == p_id_t) & viewed == True:
                 #check if transaction is linked with offer
                 if (i_idx not in success_list):
                     #update idx lists
@@ -207,7 +215,7 @@ def informational_sort(df):
                     df.at[i_idx, 'amount'] = df.loc[m, 'amount']
                     df.at[i_idx, 'days_elapsed'] = df.loc[m, 'days_elapsed']
                     df.at[i_idx, 'success'] = 1
-                    # df.at[i_idx, 'days_to_complete'] = time_elap
+
 
     if len(drop_list) > 0:
         #drop transactions
