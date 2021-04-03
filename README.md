@@ -85,7 +85,7 @@ value - (dict of strings) - either an offer id or transaction amount depending o
 
 ## 4. Results and Observations
 
-The main findings of this project can be found in my medium post about the project [here](https://medium.com/@ben-stone/starbucks-offer-prediction-f16a75f64024).
+The main findings of this project can be found in my medium post about the project [here](https://ben-stone.medium.com/starbucks-offer-prediction-f16a75f64024).
 
 I used Logistic Regression and Linear Regression to predict whether an offer would be successful and how much in theory a person would spend.
 
