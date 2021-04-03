@@ -39,7 +39,7 @@ redundant_functions.py
 
 In order to run the Jupyter notebook you will need to have python 3 installed and the following libraries:
 
-- [pandas](https://pandas.pydata.org/)
+- [Pandas](https://pandas.pydata.org/)
 - [Sklearn](https://scikit-learn.org/stable/)
 - [Numpy](https://numpy.org/)
 - [Matplotlib](https://matplotlib.org/)
