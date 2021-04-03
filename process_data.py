@@ -206,7 +206,7 @@ def informational_sort(df):
             if (time_diff >= 0) & (p_id_i == p_id_t) & viewed == True:
                 #check if transaction is linked with offer
                 if (i_idx not in success_list):
-                    #update idx lists
+                    #Check not a dupicate tranasaction
                     success_list.append(i_idx)
                     drop_list.append(m)
 

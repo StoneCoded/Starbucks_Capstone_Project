@@ -1,5 +1,5 @@
 '''
-The functions below were largely used to try and compute NaN values. This is 
+The functions below were largely used to try and compute NaN values. This is
 an area I believe an be improved upon so for the time being, these functions will
 be set asside until time can be allocated to address them.
 
@@ -516,3 +516,61 @@ def clean_data(build_model = True, rs = 42, score = False, compute_nans = True):
             continue
     print('Clean Completed')
     return full_df
+
+
+def graphic(target):
+    '''
+    ARGS: Target - Demographic of interest
+
+    RETURNS: Three Plots of True vs Predicted:
+                         - Transaction
+                         - Standard Deviation
+                         - Max/Min
+    ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+    '''
+
+    mins = amount_pred_full.groupby(target)['amount'].min()
+    maxs = amount_pred_full.groupby(target)['amount'].max()
+    avg = amount_pred_full.groupby(target)['amount'].mean().values
+    std = amount_pred_full.groupby(target)['amount'].describe().iloc[:,4].values
+    std1 = amount_pred_full.groupby(target)['amount'].describe().iloc[:,6].values
+
+    index = amount_pred_full.groupby(target)['amount'].mean().index
+
+    known_avg = overview_df.groupby(target)['amount'].mean().values
+    known_std = overview_df.groupby(target)['amount'].describe().iloc[:,4].values
+    known_std1 = amount_pred_full.groupby(target)['amount'].describe().iloc[:,6].values
+
+    known_max = overview_df.groupby(target)['amount'].max().values
+    known_min = overview_df.groupby(target)['amount'].min().values
+    known_index = overview_df.groupby(target)['amount'].describe().iloc[:,4].index
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3,1, figsize = (6,10))
+    plt.subplots_adjust(hspace = 0.3)
+    ax1.plot(known_index, known_avg, label = 'True Average')
+    ax1.plot(index, avg, color = 'red', alpha = 0.5, label = 'Predicted Average')
+    ax1.set_title(f'True vs Predicted Average Transaction Based on {target.capitalize()}')
+    ax1.set_xlabel(target.capitalize())
+    ax1.set_ylabel('Transaction Amount ($)')
+    ax1.legend()
+
+    ax2.scatter(known_index, known_std, color = 'black', label = 'Min True SD')
+    ax2.scatter(known_index, known_std1, color = 'green', label = 'Max True SD')
+    ax2.scatter(index, std, color = 'red', alpha = 0.5, label = 'Predicted SD')
+    ax2.scatter(index, std1, color = 'yellow', alpha = 0.5, label = 'Predicted SD')
+    ax2.set_title(f'True vs Predicted Standard Deviation Based on {target.capitalize()}')
+    ax2.set_xlabel(target.capitalize())
+    ax2.set_ylabel('Transaction Amount ($)')
+    ax2.legend()
+
+    ax3.scatter(known_index, known_max, color = '#1f77b4', label = 'True Limits', alpha = 0.5)
+    ax3.scatter(index, maxs, color = 'red', alpha = 0.5, label = 'Predicited Limits')
+    ax3.scatter(known_index, known_min, color = '#1f77b4', alpha = 0.5)
+    ax3.scatter(index, mins, color = 'red', alpha = 0.5)
+    ax3.set_title(f'True vs Predicted Transaction Limits Based on {target.capitalize()}')
+    ax3.set_xlabel(target.capitalize())
+    ax3.set_ylabel('Transaction Amount ($)')
+    plt.savefig(f"stat_output_{target}.png", dpi=300, bbox_inches = "tight")
+    ax3.legend()
+#Didnt show what I wanted but might use at somepoint for reference

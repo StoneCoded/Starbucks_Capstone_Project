@@ -58,8 +58,6 @@ def clean_transcript_df(df):
     df.columns = ['person_id', 'event', 'hours_elapsed', 'amount', 'reward', 'offer_id', 'days_elapsed']
     return df
 
-
-
 def clean_portfolio_df(df):
     '''
     ARGS: df - DataFrame(portfolio_df)
@@ -76,7 +74,6 @@ def clean_portfolio_df(df):
                                     'offer_id', 'email', 'mobile', 'social', 'web']
     return df
 
-
 def clean_profile_df(df):
     '''
     ARGS: df - DataFrame(profile_df)
@@ -92,7 +89,6 @@ def clean_profile_df(df):
     df['membership_start'] = pd.to_datetime(df.membership_start)
 
     return df
-
 
 def id_simpify(transcript_df, portfolio_df, profile_df):
     '''
@@ -166,7 +162,6 @@ def remove_outliers(df, col):
 
     return df
 
-
 def pre_process(transcript_df, portfolio_df, profile_df):
     '''
     ARGS:
@@ -177,8 +172,7 @@ def pre_process(transcript_df, portfolio_df, profile_df):
     RETURNS:
     df            - Dataframe
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-    Gets the to-be-used Dataframe and processes it so that its ready for model
-    use in computing NaN values
+    Gets the to-be-used Dataframe and processes it so that its ready for use
 
     '''
     part_df = transcript_df.merge(profile_df, on= ['person_id', 'person_index'], how = 'outer')
