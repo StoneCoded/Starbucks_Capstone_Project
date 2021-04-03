@@ -2,13 +2,10 @@ import numpy as np
 import pandas as pd
 from offer_rec_functions import *
 
-import progressbar
-
-
 class Offer_Recommender():
 
     '''
-    Recomendation Engine for Starbucks Offers.
+    Offer recommendation Engine for Starbucks Offers.
     '''
     def __init__(self):
         '''
@@ -26,7 +23,6 @@ class Offer_Recommender():
         '''
 
         self.starbucks_df = load_data('./data/clean_data.pkl')
-        # self.starbucks_df = pd.read_pickle('./data/test.pkl')
         self.user_list = t.starbucks_df.person_index.unique().tolist()
 
     def __build__(self):
@@ -49,6 +45,29 @@ class Offer_Recommender():
         self.success_model, self.success_accuracy, self.success_f1, \
         self.amount_model, self.amount_r2, self.amount_mse, self.offers = build_models(self.starbucks_df)
 
+    def predict_person(self, person_idx):
+        '''
+        ARGS:   person_idx        - Int index of person
+
+        RETURNS:
+                predict           - DataFrame of predicted success and amount_s
+                                    next to corresponding offer
+                offers            - DataFrame of Offer information
+                user_value        - Standardised user demographic info for prediction
+                user_data         - All rows from full dataframe corresponding to person_idx
+                compare           - Combines predict, and offers to show the full
+                                    information of each offer next to the corresponding
+                                    prediction.
+        ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+        Main prediction function.
+        '''
+        if person_idx not in self.user_list:
+            print('Sorry friend, this user is not currently in the database')
+            print('Try running with new_person, see docstring for help.')
+        else:
+            self.person_index = person_idx
+            self.predictions, self.user_value, self.user_data =  predictor(self.starbucks_df, self.person_index, self.success_model, self.amount_model)
+            self.predictions = self.predictions.merge(self.offers, on = 'offer_index')
 
     def predict_new_person(self, age, income, membership_length, gender):
         '''
@@ -93,34 +112,12 @@ class Offer_Recommender():
         new_df.loc[999999,:] = 0
         new_df.loc[999999,['person_index', 'age', 'income', 'member_length', 'gender']] = new_person_check(999999, age, income, membership_length, gender)
 
+        self.person_index = 999999
         self.extra_df = self.starbucks_df.copy()
         self.extra_df.loc[999999] = new_df.xs(999999)
 
         self.predictions, self.user_value, self.user_data =  predictor(self.extra_df, 999999, self.success_model, self.amount_model)
         self.compare = self.predictions.merge(self.offers, on = 'offer_index')
-
-    def predict_person(self, person_idx):
-        '''
-        ARGS:   person_idx        - Int index of person
-
-        RETURNS:
-                predict           - DataFrame of predicted success and amount_s
-                                    next to corresponding offer
-                offers            - DataFrame of Offer information
-                user_value        - Standardised user demographic info for prediction
-                user_data         - All rows from full dataframe corresponding to person_idx
-                compare           - Combines predict, and offers to show the full
-                                    information of each offer next to the corresponding
-                                    prediction.
-        ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-        Main prediction function.
-        '''
-        if person_idx not in self.user_list:
-            print('Sorry friend, this user is not currently in the database')
-            print('Try running with new_person, see docstring for help.')
-        else:
-            self.predictions, self.user_value, self.user_data =  predictor(self.starbucks_df, person_idx, self.success_model, self.amount_model)
-            self.compare = self.predictions.merge(self.offers, on = 'offer_index')
 
     def person_predict_all(self, filename = './data/amount_prediction_full_3.pkl'):
 
@@ -208,14 +205,83 @@ class Offer_Recommender():
             am_coef.append(self.amount_model[f'offer_{n}'].coef_)
         self.amount_coef  = pd.DataFrame(am_coef, columns = self.user_value.columns)
 
+    def recommendation(self):
+        '''
+        ARGS: None
+
+        RETURNS:
+        –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+        Take predictions and offer parameters into account and provides offer recommendation
+        for predicted person.
+
+        '''
+        recs = t.predictions.copy()
+
+        def f(x):
+          return 1 if x['predicted_amount'] > x['difficulty'] else 0
+
+        recs['diff_check'] = recs.apply(f, axis=1)
+        recs['success_adjust'] = recs['predicted_success'] * recs['diff_check']
+        recs['amount_adjust'] = recs['predicted_amount'] * recs['success_adjust']
+        recs = recs.sort_values(by='amount_adjust', ascending = False)
+        self.recommend = recs[recs['success_adjust'] == 1].iloc[:,:-3]
+
+    def rec_graph(self):
+        fig, ax = plt.subplots()
+        self.user_data.person_index.values[0]
+        x = self.starbucks_df[self.starbucks_df['person_index'] == self.person_index].amount.index
+        y = self.starbucks_df[self.starbucks_df['person_index'] == self.person_index].amount.values
+
+        x2 = self.recommend.predicted_amount.index
+        y2 = self.recommend.predicted_amount.values
+
+        ax.scatter(range(len(x)), y, label = 'Transactions')
+        ax.scatter(x2, y2, label = 'Predicted Transactions')
+        ax.set_ylabel('Amount($)')
+        ax.set_xlabel('Transaction Number')
+        ax.legend()
+        self.plot = fig
+
 t = Offer_Recommender()
 t.__load__()
 t.__build__()
-t.offer_predict(100)
-t.compare
-t.create_new_person(580, 1800000, 60, 'O')
-t.predictions
+t.predict_person(1)
+1.533279e-04
+t.coef_()
+t.success_coef
 
+t.recommendation()
+t.rec_graph()
+t.plot.savefig('recommend.png', dpi=300, bbox_inches = "tight")
+f1 = {}
+for n in t.success_f1:
+    f1[n[0]] = n[1]
+acc = {}
+for n in t.success_accuracy:
+    acc[n[0]] = n[1]
+r2_ = {}
+for n in t.amount_r2:
+    r2_[n[0]] = n[1]
+mse = {}
+for n in t.amount_mse:
+    mse[n[0]] = n[1]
+
+
+
+f1_o = []
+acc_o = []
+r2_o = []
+mse_o = []
+for n in range(1,12):
+    f1_o.append(f1[n])
+    acc_o.append(acc[n])
+    r2_o.append(r2_[n])
+    mse_o.append(mse[n])
+
+ordered_scores = {'F1':f1_o,'Accuracy':acc_o,'R2':r2_o,'Mean Squared Error':mse_o}
+t = pd.DataFrame(ordered_scores).round(2)
+t.iloc[:,1].mean()
+t.recommend.iloc[:,:3]
 '''
 ____________________________Tomorrow's Plan_____________________________________
 Final Comparison.

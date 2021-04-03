@@ -206,7 +206,7 @@ def build_models(df):
     '''
     offers = df.groupby(['offer_index', 'offer_reward', 'difficulty',
                         'duration', 'offer_type', 'offer_id', 'email', 'mobile',
-                        'social', 'web']).count().reset_index().iloc[:,:9].copy()
+                        'social', 'web']).count().reset_index().iloc[:,:10].copy()
 
     trans_id = offers[offers['offer_type'] == 'transaction'].iloc[0,0]
 
@@ -250,7 +250,6 @@ def predictor(df, person_idx, success_model_dict, amount_model_dict):
     offer_success = []
     offer_amount = []
     offer_list = df['offer_index'].unique().tolist()
-
     for offer_num in offer_list:
 
         offer_success.extend(success_model_dict[f'offer_{offer_num}'].predict(suc_user_value))

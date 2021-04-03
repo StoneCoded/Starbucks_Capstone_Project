@@ -20,6 +20,9 @@ This file is a minefield and impossible to read unless you're me. :)
 # Get Data and Process it
 overview_df = load_data()
 
+#THIS
+overview_df.groupby('duration')['success'].sum()
+
 success_df = overview_df[overview_df['success'] == 1].copy()
 
 amount_pred = pd.read_pickle('./data/amount_prediction.pkl')
