@@ -43,9 +43,15 @@ In order to run the Jupyter notebook you will need to have python 3 installed an
 - [Numpy](https://numpy.org/)
 - [Matplotlib](https://matplotlib.org/)
 
-## Project Motivation
+Make sure to `__load__()` and `__build__()` before predicting.
 
-Once every few days, Starbucks sends out an offer to users of the mobile app. An offer can be merely an advertisement for a drink or an actual offer such as a discount or BOGO (buy one get one free). I wanted to determine which demographic groups respond best to which offer type. To challenge myself further, I wanted to predict how successful offers would be for a given person based solely on their demographic.
+## Project Overview
+
+Once every few days, Starbucks sends out an offer to users of the mobile app. An offer can be merely an advertisement for a drink or an actual offer such as a discount or BOGO (buy one get one free).I was given raw test data from Starbucks that simulated how members make purchasing decisions and how those decisions are influenced by promotional offers. There are no explicit products to track or what products the offer's affect. Only the amounts of each transaction or offer are recorded. 
+
+My base task was to process offer data to determine which demographic groups respond best to which offer type.
+
+To challenge myself further, I wanted to predict how successful offers would be for a given person based solely on their demographic. This would require processing the data into a usable form and deciding which methods and metrics to use.
 
 
 ## File Descriptions

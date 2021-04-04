@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.metrics import f1_score, mean_squared_error
-from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
 import pickle
 
 from clean_data import *
@@ -77,6 +77,98 @@ def load_data(filename = './data/clean_data.pkl'):
 
     return df
 
+def success_param_test(df, trans_id):
+    '''
+    ARGS:   df         - Starbucks DataFrame
+            trans_id   - Offer Index of Transaction - it occassionally changes
+                         if input file also changes so this makes sure to keep
+                         track of it.
+
+    RETURN: best_params       - Dictionary of parameters for each possible offer
+            best_score        - accuracy score of each success model in best_params
+    –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Finds best  Logistic Regression parameters to predict success of an offer based off of
+    demographic information alone.
+
+    Note: Must Manually adjust parameters within function
+    '''
+    pred_df = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
+    offer_dict = {}
+    best_params = {}
+    best_score = {}
+
+    success_accuracy = []
+    success_f1 = []
+
+    offer_list = list(range(1,12))
+    for offer_num in offer_list:
+        offer_dict[f"offer_{offer_num}"] = pred_df[pred_df['offer_index'] == offer_num].copy()
+        offer_dict[f'offer_{trans_id}'] = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
+
+        X = offer_dict[f'offer_{offer_num}'].iloc[:,2:].copy()
+        X = pd.get_dummies(X)
+
+        y = offer_dict[f'offer_{offer_num}'].iloc[:,1]
+
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
+
+        params = {"C":np.logspace(-3,3.5,7), "warm_start":[True, False], "solver":['lbfgs', 'liblinear']}
+        logreg = LogisticRegression()
+        logreg_cv = GridSearchCV(logreg, params, cv=10)
+        logreg_cv.fit(X_train,y_train)
+
+
+        best_params[f'offer_{offer_num}'] = logreg_cv.best_params_
+        best_score[f'offer_{offer_num}'] = logreg_cv.best_score_
+    return best_params, best_score
+
+def amount_param_test(df, trans_id):
+    '''
+    ARGS:   df         - Starbucks DataFrame
+            trans_id   - Offer Index of Transaction - it occassionally changes
+                         if input file also changes so this makes sure to keep
+                         track of it.
+
+    RETURN: best_params       - Dictionary of parameters for each possible offer
+            best_score        - accuracy score of each success model in best_params
+    –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    Finds best Linear Regression parameters to predict success of an offer based off of
+    demographic information alone.
+
+    Note: Must Manually adjust parameters within function
+    '''
+    pred_df = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
+    offer_dict = {}
+    best_params = {}
+    best_score = {}
+
+    success_accuracy = []
+    success_f1 = []
+
+    offer_list = list(range(1,12))
+    for offer_num in offer_list:
+        offer_dict[f"offer_{offer_num}"] = pred_df[pred_df['offer_index'] == offer_num].copy()
+        offer_dict[f'offer_{trans_id}'] = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
+
+        X = offer_dict[f'offer_{offer_num}'].iloc[:,2:].copy()
+        X = pd.get_dummies(X)
+
+        y = offer_dict[f'offer_{offer_num}'].iloc[:,1]
+
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
+
+        params = {"fit_intercept":[True,False]}
+        logreg = LinearRegression()
+        logreg_cv = GridSearchCV(logreg, params, cv=10)
+        logreg_cv.fit(X_train,y_train)
+
+
+        best_params[f'offer_{offer_num}'] = logreg_cv.best_params_
+        best_score[f'offer_{offer_num}'] = logreg_cv.best_score_
+    return best_params, best_score
+
 def predict_success(df, trans_id):
     '''
     ARGS:   df         - Starbucks DataFrame
@@ -90,6 +182,8 @@ def predict_success(df, trans_id):
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     Uses Logistic Regression to predict success of an offer based off of
     demographic information alone.
+
+    Paramters outlined below were used as a result of testing using success_param_test()
     '''
 
     pred_df = df[['offer_index', 'success', 'gender', 'age', 'income', 'member_length']].copy()
@@ -97,6 +191,17 @@ def predict_success(df, trans_id):
     model_dict = {}
     success_accuracy = []
     success_f1 = []
+    parameters = {'offer_1': {'C': 0.1467799267622069, 'solver': 'lbfgs'},
+                 'offer_2': {'C': 0.012115276586285882,'solver': 'liblinear'},
+                 'offer_3': {'C': 0.1467799267622069, 'solver': 'lbfgs'},
+                 'offer_4': {'C': 0.001, 'solver': 'liblinear'},
+                 'offer_5': {'C': 0.001, 'solver': 'lbfgs'},
+                 'offer_6': {'C': 0.001, 'solver': 'lbfgs'},
+                 'offer_7': {'C': 0.1467799267622069, 'solver': 'lbfgs'},
+                 'offer_8': {'C': 21.54434690031882, 'solver': 'liblinear'},
+                 'offer_9': {'C': 0.001, 'solver': 'lbfgs'},
+                 'offer_10':{'C': 0.001, 'solver': 'lbfgs'},
+                 'offer_11':{'C': 0.012115276586285882,'solver': 'lbfgs'}}
 
     offer_list = pred_df['offer_index'].unique().tolist()
     for offer_num in offer_list:
@@ -110,8 +215,12 @@ def predict_success(df, trans_id):
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
 
-        model = LogisticRegression()
+        C_ = parameters[f"offer_{offer_num}"]["C"]
+        solver = parameters[f"offer_{offer_num}"]["solver"]
+
+        model = LogisticRegression(C = C_, solver = solver, warm_start=True)
         model.fit(X_train, y_train)
+
 
         success_accuracy.append([offer_num, model.score(X_test, y_test)])
         y_pred = model.predict(X_test)
@@ -159,7 +268,7 @@ def predict_amount(df, trans_id):
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
 
-        model = LinearRegression()
+        model = LinearRegression(n_jobs = -1)
         model.fit(X_train, y_train)
         amount_r2.append([offer_num , model.score(X_test, y_test)])
         amount_mse.append([offer_num, mean_squared_error(y_test, model.predict(X_test))])
@@ -263,7 +372,6 @@ def predictor(df, person_idx, success_model_dict, amount_model_dict):
     predict_df = predict_df.sort_values(by = 'offer_index', ascending = True).reset_index(drop = True)
 
     return  predict_df, suc_user_value, user_data
-
 
 def new_person_check(person_index, age, income, membership_length, gender):
     '''
