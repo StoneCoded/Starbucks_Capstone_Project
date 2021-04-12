@@ -39,7 +39,7 @@ def clean_transcript_df(df):
 
     RETURNS: df - DataFrame
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-    Unpacks Offer_id, amount and reward from list of dictionaries. Creates a
+    Unpacks offer_id, amount and reward from list of dictionaries. Creates a
     days_elapsed column, renames some columns for clarity.
 
 
@@ -249,7 +249,6 @@ def save_data():
             - cleaned dataframes at 0, 6, 12, 18 hours into each day. As all offers
               are sent out at hour 0 of each day, the failed offers are added into
               6, 12 and 18 hour dataframes for modelling.
-
     '''
 
     clean_df = clean_data()
