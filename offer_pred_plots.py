@@ -161,25 +161,6 @@ def overview_graph(df1, df2, df3, labels, filename):
     # plt.legend(['Transaction','Successful Offer','Failed Offer'])
     plt.savefig(filename, dpi=300, bbox_inches = "tight")
 
-# #No Offer/Successful Offer/Failed Offer
-# overview_graph(starbucks_df[starbucks_df['event_transaction'] == 1],
-#                starbucks_df[starbucks_df['event_offer completed'] == 1],
-#                starbucks_df[starbucks_df['event_offer received'] == 1],
-#                ['No Offer','Successful Offer', 'Failed Offer'],
-#                f"event_compare_demo.png")
-# #Discount/Bogo/Informational Total
-# overview_graph(starbucks_df[starbucks_df['offer_type'] == 'discount'],
-#                starbucks_df[starbucks_df['offer_type'] == 'bogo'],
-#                starbucks_df[starbucks_df['offer_type'] == 'informational'],
-#                ['Discount','BOGO', 'Informational'],
-#                f"offer_compare_demo.png")
-# #Discount/Bogo/Informational Success
-# overview_graph(success_df[success_df['offer_type'] == 'discount'],
-#                success_df[success_df['offer_type'] == 'bogo'],
-#                success_df[success_df['offer_type'] == 'informational'],
-#                ['Discount','BOGO', 'Informational'],
-#                f"Successful_offer_compare_demo.png")
-
 def avg_spend_age_income(df):
     '''
     ARGS: df - Data Frame
